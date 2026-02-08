@@ -7,6 +7,8 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  console.log(ENDPOINTS.LOGIN); // <--- Debug: Check if ENDPOINTS.LOGIN is correct
+
   useEffect(() => {
     const storedUser = localStorage.getItem("userInfo");
     if (storedUser) {
