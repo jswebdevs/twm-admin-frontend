@@ -4,18 +4,75 @@ import {
   Calendar,
   Globe,
   ExternalLink,
-  Image as ImageIcon,
   Wand2,
   ArrowRightLeft,
-  Trash2,
   Tags,
 } from "lucide-react";
 import { format } from "date-fns";
+import { ENDPOINTS } from "../config"; // Ensure this import exists
+import useAuth from "../hooks/useAuth"; // Needed for the Convert button to work
 
 const ShowOriginalPost = ({ isOpen, onClose, post }) => {
-  const [activeTab, setActiveTab] = useState("content"); // content | gallery
+  const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState("content");
+  const [isRewriting, setIsRewriting] = useState(false);
 
   if (!isOpen || !post) return null;
+
+  // --- SAFE TAGS HELPER ---
+  // Handles both String (Original) and Array (Rewritten) formats
+  const renderTags = () => {
+    if (!post.tags) return null;
+
+    let tagsArray = [];
+    if (Array.isArray(post.tags)) {
+      tagsArray = post.tags; // It's already an array (Rewritten Post)
+    } else if (typeof post.tags === "string") {
+      tagsArray = post.tags.split(",").map((t) => t.trim()); // Split string (Original Post)
+    }
+
+    if (tagsArray.length === 0) return null;
+
+    return (
+      <span className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+        <Tags size={12} />
+        {tagsArray.slice(0, 3).join(", ")}
+      </span>
+    );
+  };
+  // ------------------------
+
+  // AI Rewrite Handler (for the modal button)
+  const handleRewriteInsideModal = async () => {
+    if (!user) return alert("You must be logged in.");
+
+    setIsRewriting(true);
+    try {
+      const response = await fetch(
+        `${ENDPOINTS.ORIGINAL_POSTS}/rewrite/${post._id}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${user.token}`,
+          },
+        },
+      );
+
+      const data = await response.json();
+
+      if (response.ok) {
+        alert("✨ Success! Article rewritten.");
+        onClose();
+      } else {
+        alert("Error: " + data.message);
+      }
+    } catch (error) {
+      alert("Error: " + error.message);
+    } finally {
+      setIsRewriting(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
@@ -27,22 +84,23 @@ const ShowOriginalPost = ({ isOpen, onClose, post }) => {
               {post.title}
             </h2>
             <div className="flex flex-wrap items-center gap-4 mt-3 text-sm text-slate-500 dark:text-slate-400">
-              <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-xs font-medium">
-                <Globe size={12} />
-                {post.source?.name || "Unknown Source"}
-              </span>
+              {/* Show Source only if it exists (Rewritten posts might not have it populated) */}
+              {post.source && (
+                <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-xs font-medium">
+                  <Globe size={12} />
+                  {post.source.name || "Unknown Source"}
+                </span>
+              )}
+
               <span className="flex items-center gap-1.5">
                 <Calendar size={14} />
                 {post.createdAt
                   ? format(new Date(post.createdAt), "MMM d, yyyy h:mm a")
                   : "N/A"}
               </span>
-              {post.tags && (
-                <span className="flex items-center gap-1.5 text-xs">
-                  <Tags size={12} />
-                  {post.tags.split(",").slice(0, 3).join(", ")}
-                </span>
-              )}
+
+              {/* Safe Tags Render */}
+              {renderTags()}
             </div>
           </div>
           <button
@@ -53,7 +111,7 @@ const ShowOriginalPost = ({ isOpen, onClose, post }) => {
           </button>
         </div>
 
-        {/* --- Tabs (If Gallery Exists) --- */}
+        {/* --- Tabs (Only if Gallery exists) --- */}
         {post.gallery && post.gallery.length > 0 && (
           <div className="px-6 pt-2 border-b border-slate-100 dark:border-slate-800 flex gap-6">
             <button
@@ -80,7 +138,7 @@ const ShowOriginalPost = ({ isOpen, onClose, post }) => {
         )}
 
         {/* --- Scrollable Body --- */}
-        <div className="flex-1 overflow-y-auto p-6 bg-slate-50/50 dark:bg-slate-900/50">
+        <div className="flex-1 overflow-y-auto p-6 bg-slate-50/50 dark:bg-slate-900/50 custom-scrollbar">
           {activeTab === "content" ? (
             <div className="space-y-6 max-w-none">
               {/* Featured Image */}
@@ -92,13 +150,10 @@ const ShowOriginalPost = ({ isOpen, onClose, post }) => {
                     className="w-full h-full object-cover"
                     onError={(e) => (e.target.style.display = "none")}
                   />
-                  <div className="absolute bottom-2 right-2 bg-black/60 text-white text-[10px] px-2 py-1 rounded uppercase tracking-wider font-bold">
-                    Featured
-                  </div>
                 </div>
               )}
 
-              {/* Clean HTML Content */}
+              {/* Content */}
               <div
                 className="prose prose-slate dark:prose-invert max-w-none 
                               prose-headings:font-bold prose-headings:text-slate-800 dark:prose-headings:text-slate-100
@@ -139,14 +194,20 @@ const ShowOriginalPost = ({ isOpen, onClose, post }) => {
 
         {/* --- Footer Actions --- */}
         <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex justify-between items-center rounded-b-xl">
-          <a
-            href={post.originalLink}
-            target="_blank"
-            rel="noreferrer"
-            className="text-slate-500 hover:text-blue-600 text-sm flex items-center gap-2 transition-colors"
-          >
-            View Source <ExternalLink size={14} />
-          </a>
+          {post.originalLink ? (
+            <a
+              href={post.originalLink}
+              target="_blank"
+              rel="noreferrer"
+              className="text-slate-500 hover:text-blue-600 text-sm flex items-center gap-2 transition-colors"
+            >
+              View Source <ExternalLink size={14} />
+            </a>
+          ) : (
+            <span className="text-xs text-slate-400">
+              Source link unavailable
+            </span>
+          )}
 
           <div className="flex items-center gap-3">
             <button
@@ -155,12 +216,23 @@ const ShowOriginalPost = ({ isOpen, onClose, post }) => {
             >
               <ArrowRightLeft size={16} /> Compare
             </button>
-            <button
-              onClick={() => alert("AI Conversion coming soon...")}
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg flex items-center gap-2 shadow-sm shadow-blue-200 dark:shadow-none transition-colors"
-            >
-              <Wand2 size={16} /> Convert with AI
-            </button>
+
+            {/* Show AI Convert button ONLY if it's an ORIGINAL post (check for rawArticle or lack of originalPostId) */}
+            {!post.originalPostId && (
+              <button
+                onClick={handleRewriteInsideModal}
+                disabled={isRewriting}
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg flex items-center gap-2 shadow-sm shadow-blue-200 dark:shadow-none transition-colors disabled:opacity-70"
+              >
+                {isRewriting ? (
+                  "Processing..."
+                ) : (
+                  <>
+                    <Wand2 size={16} /> Convert with AI
+                  </>
+                )}
+              </button>
+            )}
           </div>
         </div>
       </div>

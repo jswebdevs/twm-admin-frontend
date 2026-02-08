@@ -27,7 +27,7 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
     { name: "Original Posts", path: "/posts/original-posts", icon: Filter },
     { name: "Clustered Posts", path: "/posts/clustered", icon: Filter },
     { name: "Summarized Posts", path: "/posts/summarized", icon: PenTool },
-    { name: "Re-phrased Posts", path: "/posts/rephrased", icon: PenTool },
+    { name: "Re-phrased Posts", path: "/posts/rewritten-posts", icon: PenTool },
     { name: "Final Posts", path: "/posts/final", icon: PenTool },
   ];
 
