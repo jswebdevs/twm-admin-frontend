@@ -3,7 +3,6 @@ import { X, Save, Globe, Code, Layers } from "lucide-react";
 import { ENDPOINTS } from "../config";
 import useAuth from "../hooks/useAuth";
 
-// Added 'websiteToEdit' prop
 const AddWebsiteModal = ({
   isOpen,
   onClose,
@@ -29,10 +28,11 @@ const AddWebsiteModal = ({
       waitForSelector: "",
     },
     pagination: {
-      type: "url_replace",
+      type: "url_replace", // 'url_replace' | 'infinite_scroll' | 'click_load_more'
       urlPattern: "",
       startPage: 1,
       maxPages: 1,
+      loadMoreSelector: "", // New field for 'click_load_more'
     },
   };
 
@@ -43,7 +43,6 @@ const AddWebsiteModal = ({
     if (isOpen) {
       if (websiteToEdit) {
         // EDIT MODE: Fill form with existing data
-        // We merge with initial state to ensure nested objects exist
         setFormData({
           ...initialFormState,
           ...websiteToEdit,
@@ -65,7 +64,7 @@ const AddWebsiteModal = ({
     }
   }, [isOpen, websiteToEdit]);
 
-  // Handle Input Changes (Same as before)
+  // Handle Input Changes
   const handleChange = (e, section = null, subField = null) => {
     const { name, value, type, checked } = e.target;
     const val = type === "checkbox" ? checked : value;
@@ -132,6 +131,19 @@ const AddWebsiteModal = ({
 
   if (!isOpen) return null;
 
+  // Helper to determine labels based on pagination type
+  const getPaginationLabels = () => {
+    switch (formData.pagination.type) {
+      case "infinite_scroll":
+        return { max: "Max Scrolls", count: "Scroll Limit" };
+      case "click_load_more":
+        return { max: "Max Clicks", count: "Click Limit" };
+      default:
+        return { max: "Max Pages", count: "Page Limit" };
+    }
+  };
+  const pageLabels = getPaginationLabels();
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
@@ -176,7 +188,7 @@ const AddWebsiteModal = ({
           ))}
         </div>
 
-        {/* Body (Same fields as before) */}
+        {/* Body */}
         <div className="flex-1 overflow-y-auto p-6">
           {error && (
             <div className="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg border border-red-200">
@@ -210,7 +222,6 @@ const AddWebsiteModal = ({
                       type="text"
                       name="slug"
                       required
-                      // Disable slug editing in Edit Mode to prevent URL breaking
                       disabled={!!websiteToEdit}
                       value={formData.slug}
                       onChange={handleChange}
@@ -241,8 +252,12 @@ const AddWebsiteModal = ({
                     onChange={handleChange}
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none text-sm bg-white"
                   >
-                    <option value="playwright">Playwright</option>
-                    <option value="cheerio">Cheerio</option>
+                    <option value="playwright">
+                      Playwright (Best for Modern Sites)
+                    </option>
+                    <option value="cheerio">
+                      Cheerio (Fast for Static Sites)
+                    </option>
                   </select>
                 </div>
               </div>
@@ -251,20 +266,25 @@ const AddWebsiteModal = ({
             {/* TAB 2: SELECTORS */}
             {activeTab === "selectors" && (
               <div className="space-y-4">
+                <div className="p-3 bg-slate-50 rounded-lg text-xs text-slate-500 mb-2">
+                  Tip: Use Chrome DevTools (Right click &gt; Inspect) to find
+                  these CSS classes.
+                </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Item Link Selector
+                    Item Link Selector (List Page)
                   </label>
                   <input
                     type="text"
                     value={formData.selectors.itemLink}
                     onChange={(e) => handleChange(e, "selectors", "itemLink")}
+                    placeholder="e.g. .article-card a"
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none text-sm font-mono"
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Content Wrapper
+                    Content Wrapper (Detail Page)
                   </label>
                   <input
                     type="text"
@@ -272,6 +292,7 @@ const AddWebsiteModal = ({
                     onChange={(e) =>
                       handleChange(e, "selectors", "contentWrapper")
                     }
+                    placeholder="e.g. article.story-body"
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none text-sm font-mono"
                   />
                 </div>
@@ -286,6 +307,7 @@ const AddWebsiteModal = ({
                       onChange={(e) =>
                         handleChange(e, "selectors", "categories")
                       }
+                      placeholder="e.g. .badge-category"
                       className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none text-sm font-mono"
                     />
                   </div>
@@ -299,6 +321,7 @@ const AddWebsiteModal = ({
                       onChange={(e) =>
                         handleChange(e, "selectors", "waitForSelector")
                       }
+                      placeholder="e.g. h1"
                       className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none text-sm font-mono"
                     />
                   </div>
@@ -319,39 +342,87 @@ const AddWebsiteModal = ({
                     onChange={(e) => handleChange(e, "pagination", "type")}
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none text-sm bg-white"
                   >
-                    <option value="url_replace">URL Replacement</option>
+                    <option value="url_replace">
+                      URL Replacement (Standard)
+                    </option>
+                    <option value="infinite_scroll">Infinite Scroll</option>
+                    <option value="click_load_more">
+                      Click 'Load More' Button
+                    </option>
                   </select>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    URL Pattern
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.pagination.urlPattern}
-                    onChange={(e) =>
-                      handleChange(e, "pagination", "urlPattern")
-                    }
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none text-sm font-mono"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
-                      Start Page
+
+                {/* Conditional Input: URL Pattern */}
+                {formData.pagination.type === "url_replace" && (
+                  <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
+                    <label className="block text-sm font-medium text-blue-900 mb-1">
+                      URL Pattern
                     </label>
                     <input
-                      type="number"
-                      value={formData.pagination.startPage}
+                      type="text"
+                      value={formData.pagination.urlPattern}
                       onChange={(e) =>
-                        handleChange(e, "pagination", "startPage")
+                        handleChange(e, "pagination", "urlPattern")
                       }
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none text-sm"
+                      placeholder="https://site.com/news?page={page}"
+                      className="w-full px-3 py-2 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm font-mono"
                     />
+                    <p className="text-xs text-blue-600 mt-1">
+                      Use <strong>{"{page}"}</strong> as the placeholder for the
+                      page number.
+                    </p>
                   </div>
-                  <div>
+                )}
+
+                {/* Conditional Input: Load More Selector */}
+                {formData.pagination.type === "click_load_more" && (
+                  <div className="bg-purple-50 p-4 rounded-lg border border-purple-100">
+                    <label className="block text-sm font-medium text-purple-900 mb-1">
+                      'Load More' Button Selector
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.pagination.loadMoreSelector}
+                      onChange={(e) =>
+                        handleChange(e, "pagination", "loadMoreSelector")
+                      }
+                      placeholder="e.g. button.load-more-btn"
+                      className="w-full px-3 py-2 border border-purple-200 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-sm font-mono"
+                    />
+                    <p className="text-xs text-purple-600 mt-1">
+                      CSS Selector for the button to click.
+                    </p>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Start Page (Only for URL Replace) */}
+                  {formData.pagination.type === "url_replace" && (
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">
+                        Start Page
+                      </label>
+                      <input
+                        type="number"
+                        value={formData.pagination.startPage}
+                        onChange={(e) =>
+                          handleChange(e, "pagination", "startPage")
+                        }
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none text-sm"
+                      />
+                    </div>
+                  )}
+
+                  {/* Dynamic Max Pages/Scrolls */}
+                  <div
+                    className={
+                      formData.pagination.type !== "url_replace"
+                        ? "col-span-2"
+                        : ""
+                    }
+                  >
                     <label className="block text-sm font-medium text-slate-700 mb-1">
-                      Max Pages
+                      {pageLabels.max}
                     </label>
                     <input
                       type="number"
@@ -361,6 +432,13 @@ const AddWebsiteModal = ({
                       }
                       className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none text-sm"
                     />
+                    <p className="text-xs text-slate-500 mt-1">
+                      {formData.pagination.type === "infinite_scroll"
+                        ? "Number of times to scroll down."
+                        : formData.pagination.type === "click_load_more"
+                          ? "Number of times to click the button."
+                          : "Last page number to scrape."}
+                    </p>
                   </div>
                 </div>
               </div>

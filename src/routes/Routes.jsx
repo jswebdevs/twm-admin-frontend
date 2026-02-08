@@ -8,6 +8,10 @@ import PrivateRoutes from "./PrivateRoutes";
 import RawPosts from "../pages/RawPosts";
 import OriginalPosts from "../pages/OriginalPosts";
 import RewrittenPosts from "../pages/RewrittenPosts";
+import ClusteredPosts from "../pages/ClusteredPosts";
+import SummarizedPosts from "../pages/SummarizedPosts";
+import FinalPosts from "../pages/FinalPosts";
+import ErrorPage from "../pages/ErrorPage";
 
 const Routes = createBrowserRouter([
   {
@@ -17,6 +21,7 @@ const Routes = createBrowserRouter([
   {
     // Wrapper Route: Checks if user is logged in
     element: <PrivateRoutes />,
+    errorElement: <ErrorPage/>,
     children: [
       {
         // Layout Route: Renders Sidebar + Page Content
@@ -42,6 +47,18 @@ const Routes = createBrowserRouter([
           {
             path: "/posts/rewritten-posts",
             element: <RewrittenPosts/>
+          },
+          {
+            path: "/posts/clustered-posts",
+            element: <ClusteredPosts/>
+          },
+          {
+            path: "/posts/summarized-posts",
+            element: <SummarizedPosts/>
+          },
+          {
+            path: "/posts/final-posts",
+            element: <FinalPosts/>
           }
         ],
       },

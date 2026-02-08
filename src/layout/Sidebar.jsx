@@ -25,10 +25,10 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
     { name: "Websites List", path: "/websites", icon: Globe },
     { name: "Raw Posts", path: "/posts/raw-posts", icon: FileText },
     { name: "Original Posts", path: "/posts/original-posts", icon: Filter },
-    { name: "Clustered Posts", path: "/posts/clustered", icon: Filter },
-    { name: "Summarized Posts", path: "/posts/summarized", icon: PenTool },
+    { name: "Clustered Posts", path: "/posts/clustered-posts", icon: Filter },
+    { name: "Summarized Posts", path: "/posts/summarized-posts", icon: PenTool },
     { name: "Re-phrased Posts", path: "/posts/rewritten-posts", icon: PenTool },
-    { name: "Final Posts", path: "/posts/final", icon: PenTool },
+    { name: "Final Posts", path: "/posts/final-posts", icon: PenTool },
   ];
 
   return (
