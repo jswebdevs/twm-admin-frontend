@@ -73,7 +73,7 @@ const RawPosts = () => {
 
     try {
       const response = await fetch(
-        "https://twm-admin-backend.onrender.com/api/originalposts/bulk-convert",
+        `${ENDPOINTS.ORIGINAL_POSTS}/bulk-convert`,
         {
           method: "POST",
           headers: { Authorization: `Bearer ${user.token}` },

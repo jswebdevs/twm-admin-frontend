@@ -1,137 +1,201 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   X,
   Calendar,
   Globe,
   ExternalLink,
-  Image as ImageIcon,
-  Video,
+  Copy,
+  Check,
+  Code,
+  FileCode,
 } from "lucide-react";
 import { format } from "date-fns";
 
+/**
+ * Helper function to format/beautify HTML string
+ * Mimics Prettier-like indentation for readability
+ */
+const formatHTML = (html) => {
+  if (!html) return "";
+
+  const tab = "  ";
+  let result = "";
+  let indent = 0;
+
+  // Remove existing newlines and extra spaces to start fresh
+  const cleanHTML = html.replace(/>\s+</g, "><").trim();
+
+  // Split by tags
+  cleanHTML.split(/(?=<)/).forEach((element) => {
+    // Decrement indent for closing tags
+    if (element.match(/^<\/\w/)) {
+      indent = Math.max(0, indent - 1);
+    }
+
+    // Add indentation
+    result += tab.repeat(indent) + element + "\n";
+
+    // Increment indent for opening tags (excluding self-closing ones)
+    // List of common void elements that don't need closing
+    const isVoid =
+      /^(<img|<br|<input|<hr|<meta|<link|<source|<area|<base|<col|<embed|<track|<wbr)/.test(
+        element,
+      );
+    const isClosing = /^<\//.test(element);
+
+    if (!isClosing && !isVoid && /^<\w/.test(element)) {
+      indent++;
+    }
+  });
+
+  return result;
+};
+
 const ShowRawPost = ({ isOpen, onClose, article }) => {
+  const [formattedContent, setFormattedContent] = useState("");
+  const [copied, setCopied] = useState(false);
+
+  // Format content when article loads
+  useEffect(() => {
+    if (article?.content) {
+      setFormattedContent(formatHTML(article.content));
+    }
+  }, [article]);
+
+  const handleCopy = () => {
+    if (formattedContent) {
+      navigator.clipboard.writeText(formattedContent);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
   if (!isOpen || !article) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-4xl h-[90vh] flex flex-col border border-slate-200 dark:border-slate-700">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/80 backdrop-blur-sm p-4">
+      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-5xl h-[90vh] flex flex-col border border-slate-200 dark:border-slate-700">
         {/* --- Header --- */}
-        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-start gap-4">
+        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-start gap-4 bg-slate-50 dark:bg-slate-900/50">
           <div>
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white line-clamp-2">
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white line-clamp-1 font-mono">
               {article.title}
             </h2>
             <div className="flex items-center gap-4 mt-2 text-sm text-slate-500 dark:text-slate-400">
-              <span className="flex items-center gap-1.5">
-                <Globe size={14} />
+              <span className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-xs font-mono">
+                <Globe size={12} />
                 {article.source?.name || "Unknown Source"}
               </span>
-              <span className="flex items-center gap-1.5">
-                <Calendar size={14} />
+              <span className="flex items-center gap-1.5 font-mono text-xs">
+                <Calendar size={12} />
                 {article.createdAt
-                  ? format(new Date(article.createdAt), "MMM d, yyyy h:mm a")
+                  ? format(new Date(article.createdAt), "yyyy-MM-dd HH:mm:ss")
                   : "N/A"}
               </span>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 transition"
           >
             <X size={24} />
           </button>
         </div>
 
-        {/* --- Scrollable Body --- */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          {/* 1. Featured Media Section */}
-          {article.media?.featuredImage && (
-            <div className="relative w-full h-64 sm:h-80 bg-slate-100 dark:bg-slate-800 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700">
-              <img
-                src={article.media.featuredImage}
-                alt="Featured"
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.src =
-                    "https://via.placeholder.com/800x400?text=Image+Load+Failed";
-                }}
-              />
-              {article.type === "video" && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                  <div className="bg-white/20 backdrop-blur-md p-4 rounded-full">
-                    <Video size={32} className="text-white" />
-                  </div>
-                </div>
+        {/* --- Code Editor Body --- */}
+        <div className="flex-1 flex flex-col min-h-0 bg-[#0d1117]">
+          {" "}
+          {/* Github Dark bg color */}
+          {/* Editor Toolbar */}
+          <div className="flex items-center justify-between px-4 py-2 bg-slate-800 border-b border-slate-700">
+            <div className="flex items-center gap-2 text-slate-400 text-xs font-mono">
+              <FileCode size={14} className="text-emerald-500" />
+              <span>raw_content.html</span>
+              <span className="text-slate-600">|</span>
+              <span>{formattedContent.length} chars</span>
+            </div>
+
+            <button
+              onClick={handleCopy}
+              className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-white bg-slate-700 hover:bg-slate-600 rounded transition-colors"
+            >
+              {copied ? (
+                <Check size={14} className="text-emerald-400" />
+              ) : (
+                <Copy size={14} />
               )}
-              <div className="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded">
-                Featured Media
-              </div>
-            </div>
-          )}
-
-          {/* 2. Content Preview (HTML) */}
-          <div>
-            <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400 mb-3">
-              Scraped Content
-            </h3>
-            <div className="p-6 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700">
-              {/* We use a custom wrapper class to style the raw HTML 
-                                because raw HTML comes without Tailwind classes.
-                            */}
-              <div
-                className="prose prose-slate dark:prose-invert max-w-none 
-                                           [&>p]:mb-4 [&>h1]:text-2xl [&>h1]:font-bold [&>h1]:mb-4 
-                                           [&>h2]:text-xl [&>h2]:font-bold [&>h2]:mt-6 [&>h2]:mb-3
-                                           [&>ul]:list-disc [&>ul]:pl-5 [&>ul]:mb-4
-                                           [&>blockquote]:border-l-4 [&>blockquote]:border-slate-300 [&>blockquote]:pl-4 [&>blockquote]:italic
-                                           [&>img]:rounded-lg [&>img]:max-w-full [&>img]:h-auto [&>img]:my-4"
-                dangerouslySetInnerHTML={{
-                  __html:
-                    article.content ||
-                    '<p class="text-slate-400 italic">No content scraped.</p>',
-                }}
-              />
-            </div>
+              {copied ? "Copied!" : "Copy Raw"}
+            </button>
           </div>
+          {/* Code Area */}
+          <div className="flex-1 overflow-auto custom-scrollbar">
+            <pre className="p-4 text-sm font-mono leading-relaxed tab-4">
+              <code className="block text-slate-300">
+                {formattedContent.split("\n").map((line, i) => (
+                  <div
+                    key={i}
+                    className="table-row hover:bg-slate-800/50 w-full"
+                  >
+                    <span className="table-cell text-right pr-4 select-none text-slate-600 w-12 border-r border-slate-800 mr-4">
+                      {i + 1}
+                    </span>
+                    <span className="table-cell pl-4 whitespace-pre-wrap break-all">
+                      {/* Simple Syntax Highlighting Logic */}
+                      {line.split(/(<[^>]+>)/g).map((token, j) => {
+                        if (token.startsWith("<") && token.endsWith(">")) {
+                          // It's a tag
+                          const isClosing = token.startsWith("</");
+                          const tagName = token
+                            .replace(/<|\/|>/g, "")
+                            .split(" ")[0];
+                          const rest = token.substring(
+                            isClosing ? 2 + tagName.length : 1 + tagName.length,
+                            token.length - 1,
+                          );
 
-          {/* 3. Raw Data Debug (Optional - good for devs) */}
-          <details className="group">
-            <summary className="cursor-pointer text-xs font-medium text-slate-400 uppercase tracking-wider flex items-center gap-2 hover:text-emerald-600 transition">
-              <span>View Raw JSON Data</span>
-              <span className="group-open:rotate-180 transition-transform">
-                ▼
-              </span>
-            </summary>
-            <div className="mt-3 p-4 bg-slate-900 text-emerald-400 rounded-lg overflow-x-auto font-mono text-xs">
-              <pre>
-                {JSON.stringify(
-                  {
-                    id: article._id,
-                    link: article.link,
-                    media: article.media,
-                    tags: article.tags,
-                  },
-                  null,
-                  2,
-                )}
-              </pre>
-            </div>
-          </details>
+                          return (
+                            <span key={j}>
+                              <span className="text-blue-400">
+                                &lt;{isClosing ? "/" : ""}
+                                {tagName}
+                              </span>
+                              <span className="text-purple-300">{rest}</span>
+                              <span className="text-blue-400">&gt;</span>
+                            </span>
+                          );
+                        }
+                        // It's content
+                        return (
+                          <span key={j} className="text-slate-100">
+                            {token}
+                          </span>
+                        );
+                      })}
+                    </span>
+                  </div>
+                ))}
+              </code>
+            </pre>
+          </div>
         </div>
 
         {/* --- Footer --- */}
-        <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 flex justify-between items-center rounded-b-xl">
-          <span className="text-xs text-slate-500">
-            ID: <span className="font-mono">{article._id}</span>
-          </span>
+        <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 flex justify-between items-center rounded-b-xl">
+          <div className="flex flex-col">
+            <span className="text-[10px] uppercase tracking-wider text-slate-500 font-bold mb-0.5">
+              Database ID
+            </span>
+            <span className="text-xs font-mono text-slate-700 dark:text-slate-300 bg-slate-200 dark:bg-slate-800 px-2 py-1 rounded">
+              {article._id}
+            </span>
+          </div>
           <a
             href={article.link}
             target="_blank"
             rel="noreferrer"
-            className="flex items-center gap-2 bg-slate-900 hover:bg-slate-700 dark:bg-emerald-600 dark:hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+            className="flex items-center gap-2 bg-slate-900 hover:bg-slate-700 dark:bg-emerald-600 dark:hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm"
           >
-            View Original <ExternalLink size={16} />
+            Open Source Link <ExternalLink size={16} />
           </a>
         </div>
       </div>

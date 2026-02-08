@@ -6,6 +6,7 @@ import WebsitesList from "../pages/WebsitesList";
 import Login from "../pages/Login"; // Make sure you have this
 import PrivateRoutes from "./PrivateRoutes";
 import RawPosts from "../pages/RawPosts";
+import OriginalPosts from "../pages/OriginalPosts";
 
 const Routes = createBrowserRouter([
   {
@@ -32,6 +33,10 @@ const Routes = createBrowserRouter([
           {
             path: "/posts/raw-posts",
             element: <RawPosts/>
+          },
+          {
+            path: "/posts/original-posts",
+            element: <OriginalPosts/>
           }
         ],
       },
